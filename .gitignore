@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local data store (dev only)
 /.data
+
+# local note with the admin password (never commit)
+/ADMIN-PASSWORD.txt
