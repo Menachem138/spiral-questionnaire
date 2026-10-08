@@ -18,7 +18,7 @@
  *   MAX_JOBS       per run, default 3
  *
  * Usage:
- *   node spiral-worker.mjs --scope=now   only what the admin asked to analyze now (runs every 2 min, cheap)
+ *   node spiral-worker.mjs --scope=now   only what the admin asked to analyze now (runs every hour, cheap)
  *   node spiral-worker.mjs --scope=all   the whole queue (morning and evening runs)
  */
 import { spawn } from "node:child_process";

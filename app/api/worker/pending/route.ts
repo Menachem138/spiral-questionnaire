@@ -4,7 +4,7 @@ import { isWorker } from "@/lib/worker-auth";
 
 /**
  * רשימת המשימות ל-worker.
- * ?scope=now -> רק מה שהמנהל ביקש לנתח עכשיו (נבדק כל 2 דקות, זול מאוד)
+ * ?scope=now -> רק מה שהמנהל ביקש לנתח עכשיו (נבדק פעם בשעה, זול מאוד)
  * ?scope=all -> כל התור (ריצות הבוקר והערב)
  */
 export async function GET(req: Request) {

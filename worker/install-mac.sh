@@ -1,7 +1,7 @@
 #!/bin/bash
 # Installs the analysis worker on this Mac (launchd):
 #   - every day at 08:00 and 20:00: analyzes everything waiting in the queue
-#   - every 2 minutes: checks only whether the admin pressed "analyze now" (no Claude usage unless there is a request)
+#   - every hour: checks only whether the admin pressed "analyze now" (no Claude usage unless there is a request)
 # Usage:  bash worker/install-mac.sh <SITE_URL> <WORKER_TOKEN>
 # Remove: bash worker/install-mac.sh --uninstall
 set -euo pipefail
@@ -51,7 +51,7 @@ plist "$L_SCHED" all '<key>StartCalendarInterval</key>
     <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
     <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
   </array>'
-plist "$L_NOW" now '<key>StartInterval</key><integer>120</integer>
+plist "$L_NOW" now '<key>StartInterval</key><integer>3600</integer>
   <key>RunAtLoad</key><true/>'
 
-echo "installed: full run at 08:00 and 20:00, on-demand check every 2 minutes. log: $DIR/worker.log"
+echo "installed: full run at 08:00 and 20:00, on-demand check every hour. log: $DIR/worker.log"

@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const startedAt = prev?.startedAt ?? new Date().toISOString();
 
   if (body.requeue) {
-    // חוזר לתור הרגיל (לא ל"עכשיו"), כדי שלא ינסה שוב כל 2 דקות
+    // חוזר לתור הרגיל (לא ל"עכשיו"), כדי שלא ינסה שוב בכל בדיקה
     await saveAnalysis(id, { status: "queued", startedAt: new Date().toISOString(), error: String(body.error ?? "").slice(0, 300) });
     return NextResponse.json({ ok: true });
   }

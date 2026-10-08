@@ -59,16 +59,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           ) : (
             <div className="mt-4 space-y-3 rounded-xl bg-bg-2/70 px-3 py-3 text-sm text-ink-2">
               <p>
-                הניתוח רץ דרך Claude Code במחשב שלך (מנוי): אוטומטית כל יום ב-08:00 וב-20:00, או תוך כ-2 דקות כשלוחצים
+                הניתוח רץ דרך Claude Code במחשב שלך (מנוי): אוטומטית כל יום ב-08:00 וב-20:00, או תוך שעה לכל היותר כשלוחצים
                 &quot;נתח עכשיו&quot;.
               </p>
               <p className="flex items-center gap-2">
                 <span
-                  className={`h-2.5 w-2.5 rounded-full ${seenMin !== null && seenMin <= 5 ? "bg-ok" : "bg-danger"}`}
+                  className={`h-2.5 w-2.5 rounded-full ${seenMin !== null && seenMin <= 70 ? "bg-ok" : "bg-danger"}`}
                 />
                 {seenMin === null
                   ? "המחשב עדיין לא התחבר לאתר"
-                  : seenMin <= 5
+                  : seenMin <= 70
                     ? "המחשב שלך מחובר ומוכן לנתח"
                     : `המחשב לא היה מחובר ב-${seenMin < 120 ? `${seenMin} הדקות` : `${Math.round(seenMin / 60)} השעות`} האחרונות (כנראה כבוי או ישן)`}
               </p>
