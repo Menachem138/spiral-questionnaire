@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogoutButton, ShowResultsToggle } from "@/components/AdminControls";
+import { AnalyzeAllButton, LogoutButton, ShowResultsToggle } from "@/components/AdminControls";
 import { ColorChip } from "@/components/Report";
 import { SpiralMark } from "@/components/SpiralMark";
 import { isAdmin } from "@/lib/auth";
 import { COLOR_META, CONFIDENCE_HE, COLORS } from "@/lib/colors";
-import { getSettings, listAnalysisStatuses, listResponses } from "@/lib/store";
+import { getSettings, getWorkerSeen, listAnalysisStatuses, listResponses } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +20,11 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   if (!(await isAdmin())) redirect("/admin/login");
   const { q = "" } = await searchParams;
-  const [all, settings] = await Promise.all([listResponses(), getSettings()]);
+  const [all, settings, workerSeen] = await Promise.all([listResponses(), getSettings(), getWorkerSeen()]);
   const rows = q ? all.filter((r) => `${r.respondent.name} ${r.respondent.contact}`.includes(q)) : all;
-  const statuses = await listAnalysisStatuses(rows.map((r) => r.id));
+  const statuses = await listAnalysisStatuses(all.map((r) => r.id));
+  const queuedCount = all.filter((r) => statuses[r.id] === "queued").length;
+  const seenMin = workerSeen ? Math.round((Date.parse(new Date().toISOString()) - Date.parse(workerSeen)) / 60_000) : null;
 
   const dist = Object.fromEntries(COLORS.map((c) => [c, 0])) as Record<string, number>;
   all.forEach((r) => dist[r.scoring.dominant]++);
@@ -52,11 +54,27 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div className="card p-5">
           <div className="mb-3 text-sm font-bold">הגדרות</div>
           <ShowResultsToggle initial={settings.showResultsToRespondent} />
-          <p className="mt-4 rounded-xl bg-bg-2/70 px-3 py-2 text-sm text-ink-2">
-            {process.env.ANTHROPIC_API_KEY
-              ? "מנוע הניתוח רץ בשרת עם מפתח API."
-              : "מנוע הניתוח רץ דרך Claude Code במחשב שלך (מנוי). שאלונים חדשים נכנסים לתור ומנותחים בריצה הבאה של ה-worker."}
-          </p>
+          {process.env.ANTHROPIC_API_KEY ? (
+            <p className="mt-4 rounded-xl bg-bg-2/70 px-3 py-2 text-sm text-ink-2">מנוע הניתוח רץ בשרת עם מפתח API.</p>
+          ) : (
+            <div className="mt-4 space-y-3 rounded-xl bg-bg-2/70 px-3 py-3 text-sm text-ink-2">
+              <p>
+                הניתוח רץ דרך Claude Code במחשב שלך (מנוי): אוטומטית כל יום ב-08:00 וב-20:00, או תוך כ-2 דקות כשלוחצים
+                &quot;נתח עכשיו&quot;.
+              </p>
+              <p className="flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${seenMin !== null && seenMin <= 5 ? "bg-ok" : "bg-danger"}`}
+                />
+                {seenMin === null
+                  ? "המחשב עדיין לא התחבר לאתר"
+                  : seenMin <= 5
+                    ? "המחשב שלך מחובר ומוכן לנתח"
+                    : `המחשב לא היה מחובר ב-${seenMin < 120 ? `${seenMin} הדקות` : `${Math.round(seenMin / 60)} השעות`} האחרונות (כנראה כבוי או ישן)`}
+              </p>
+              <AnalyzeAllButton count={queuedCount} />
+            </div>
+          )}
         </div>
         <div className="card p-5">
           <div className="mb-3 text-sm font-bold">התפלגות הצבע הדומיננטי</div>

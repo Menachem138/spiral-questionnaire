@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "@upstash/redis": "^1.39.0",
     "@vercel/blob": "^2.8.1",
     "next": "16.4.0",
     "react": "19.3.0",

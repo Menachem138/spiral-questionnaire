@@ -77,6 +77,7 @@ export function ResponseActions({
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) setMsg(data.error || "שגיאה");
+    else if (data.queued) setMsg("נשלח לניתוח. אם המחשב שלך דלוק, הניתוח יתחיל תוך כ-2 דקות.");
     router.refresh();
   }
 
@@ -101,9 +102,9 @@ export function ResponseActions({
         <button
           className="btn btn-primary px-4 py-2 text-sm"
           onClick={regenerate}
-          disabled={busy || analysisStatus === "running" || analysisStatus === "queued"}
+          disabled={busy || analysisStatus === "running"}
         >
-          {analysisStatus === "none" ? "הפקת ניתוח מלא" : analysisStatus === "queued" ? "בתור לניתוח" : "הפקת הניתוח מחדש"}
+          {analysisStatus === "none" || analysisStatus === "queued" ? "נתח עכשיו" : "הפקת הניתוח מחדש"}
         </button>
         <button className="btn btn-ghost px-4 py-2 text-sm" onClick={toggleShare}>
           {isShared ? "ביטול השיתוף עם המשיב" : "אפשר למשיב לראות את התוצאה"}
@@ -125,10 +126,33 @@ export function ResponseActions({
       </div>
       {!hasKey && analysisStatus === "queued" && (
         <p className="text-sm text-muted">
-          השאלון בתור. ה-worker של Claude Code במחשב שלך יפיק את הניתוח בריצה הבאה שלו.
+          השאלון בתור. הוא ינותח בריצה הקבועה הבאה (08:00 או 20:00), או תוך כ-2 דקות אם לוחצים &quot;נתח עכשיו&quot;.
         </p>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}
+    </div>
+  );
+}
+
+export function AnalyzeAllButton({ count }: { count: number }) {
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (count === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        className="btn btn-primary px-4 py-2 text-sm"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const res = await fetch("/api/admin/analyze-all", { method: "POST" });
+          setBusy(false);
+          setMsg(res.ok ? "נשלח לניתוח. אם המחשב שלך דלוק, הניתוח יתחיל תוך כ-2 דקות." : "שגיאה");
+        }}
+      >
+        נתח עכשיו את כל הממתינים ({count})
+      </button>
+      {msg && <span className="text-sm text-ink-2">{msg}</span>}
     </div>
   );
 }

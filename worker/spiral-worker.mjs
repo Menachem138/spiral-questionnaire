@@ -17,7 +17,9 @@
  *   CLAUDE_MODEL   default "opus"
  *   MAX_JOBS       per run, default 3
  *
- * Usage: node spiral-worker.mjs            (one pass, then exit)
+ * Usage:
+ *   node spiral-worker.mjs --scope=now   only what the admin asked to analyze now (runs every 2 min, cheap)
+ *   node spiral-worker.mjs --scope=all   the whole queue (morning and evening runs)
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
@@ -35,7 +37,8 @@ const cfg = {
   token: process.env.WORKER_TOKEN || fileCfg.WORKER_TOKEN || "",
   engines: (process.env.ENGINES || fileCfg.ENGINES || "claude,codex").split(",").map((s) => s.trim()),
   claudeModel: process.env.CLAUDE_MODEL || fileCfg.CLAUDE_MODEL || "opus",
-  maxJobs: Number(process.env.MAX_JOBS || fileCfg.MAX_JOBS || 3),
+  maxJobs: Number(process.env.MAX_JOBS || fileCfg.MAX_JOBS || 10),
+  scope: (process.argv.find((a) => a.startsWith("--scope=")) ?? "--scope=now").split("=")[1] === "all" ? "all" : "now",
 };
 
 function log(...args) {
@@ -192,9 +195,9 @@ async function main() {
   }
   writeFileSync(LOCK_FILE, String(Date.now()));
   try {
-    const { pending } = await api("GET", "/api/worker/pending");
+    const { pending } = await api("GET", `/api/worker/pending?scope=${cfg.scope}`);
     if (!pending.length) return;
-    log(`${pending.length} pending`);
+    log(`[${cfg.scope}] ${pending.length} pending`);
     for (const id of pending.slice(0, cfg.maxJobs)) await processJob(id);
   } catch (e) {
     log("error:", e.message);
