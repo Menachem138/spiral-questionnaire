@@ -20,6 +20,7 @@
  * Usage:
  *   node spiral-worker.mjs --scope=now   only what the admin asked to analyze now (runs every hour, cheap)
  *   node spiral-worker.mjs --scope=all   the whole queue (morning and evening runs)
+ *   node spiral-worker.mjs --id=<id>     one specific questionnaire, right now
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
@@ -195,7 +196,8 @@ async function main() {
   }
   writeFileSync(LOCK_FILE, String(Date.now()));
   try {
-    const { pending } = await api("GET", `/api/worker/pending?scope=${cfg.scope}`);
+    const only = process.argv.find((a) => a.startsWith("--id="))?.split("=")[1];
+    const { pending } = only ? { pending: [only] } : await api("GET", `/api/worker/pending?scope=${cfg.scope}`);
     if (!pending.length) return;
     log(`[${cfg.scope}] ${pending.length} pending`);
     for (const id of pending.slice(0, cfg.maxJobs)) await processJob(id);
