@@ -161,6 +161,11 @@ async function processJob(id) {
       } catch (e) {
         errors.push(`${name}: ${e.message}`);
         log(`job ${id}: ${name} failed: ${e.message}`);
+        // Claude Code not signed in is a setup issue, not an emergency: do not fall back to ChatGPT
+        if (name === "claude" && /not logged in|\/login/i.test(e.message)) {
+          log("Claude Code is not signed in. Run: claude auth login");
+          break;
+        }
       }
     }
     // engine unavailable (not signed in / usage limit / not installed): keep it in the queue for the next run
