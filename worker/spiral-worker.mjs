@@ -14,7 +14,8 @@
  *   SITE_URL       e.g. https://spiral-questionnaire.vercel.app
  *   WORKER_TOKEN   shared secret, same value as on the server
  *   ENGINES        "claude,codex" (order = priority). Default: "claude,codex"
- *   CLAUDE_MODEL   default "opus"
+ *   CLAUDE_MODEL   default "claude-sonnet-5-5" (needs Claude Code 2.1.293+)
+ *   CLAUDE_EFFORT  default "high" ("medium" is faster and lighter)
  *   MAX_JOBS       per run, default 3
  *
  * Usage:
@@ -37,7 +38,8 @@ const cfg = {
   site: (process.env.SITE_URL || fileCfg.SITE_URL || "").replace(/\/$/, ""),
   token: process.env.WORKER_TOKEN || fileCfg.WORKER_TOKEN || "",
   engines: (process.env.ENGINES || fileCfg.ENGINES || "claude,codex").split(",").map((s) => s.trim()),
-  claudeModel: process.env.CLAUDE_MODEL || fileCfg.CLAUDE_MODEL || "opus",
+  claudeModel: process.env.CLAUDE_MODEL || fileCfg.CLAUDE_MODEL || "claude-sonnet-5-5",
+  claudeEffort: process.env.CLAUDE_EFFORT || fileCfg.CLAUDE_EFFORT || "high",
   maxJobs: Number(process.env.MAX_JOBS || fileCfg.MAX_JOBS || 10),
   scope: (process.argv.find((a) => a.startsWith("--scope=")) ?? "--scope=now").split("=")[1] === "all" ? "all" : "now",
 };
@@ -109,7 +111,7 @@ async function withClaude(job, work) {
     "--tools", "",
     "--no-session-persistence",
     "--model", cfg.claudeModel,
-    "--effort", "high",
+    "--effort", cfg.claudeEffort,
   ];
   const r = await run("claude", args, job.prompt, { cwd: work, timeoutMs: 15 * 60_000 });
   let parsed;

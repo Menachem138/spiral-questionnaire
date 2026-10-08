@@ -33,7 +33,7 @@ bash worker/install-mac.sh https://spiral-questionnaire.vercel.app <WORKER_TOKEN
 | `WORKER_TOKEN` | סוד משותף בין השרת ל-worker שרץ אצל המנהל |
 | `ANTHROPIC_API_KEY` | לא חובה. אם מוגדר, הניתוח רץ בשרת במקום דרך ה-worker |
 | `BLOB_READ_WRITE_TOKEN` | נוצר אוטומטית כשמחברים Vercel Blob (אחסון פרטי) |
-| `ANTHROPIC_MODEL` | לא חובה. ברירת מחדל: `claude-opus-5-5` |
+| `ANTHROPIC_MODEL` | לא חובה. ברירת מחדל: `claude-sonnet-5-5` |
 | `ANALYSIS_EFFORT` | לא חובה. ברירת מחדל: `high` |
 
 ## פיתוח מקומי

@@ -8,7 +8,7 @@ import { ANALYSIS_JSON_SCHEMA, type AnalysisResult } from "./analysis-schema";
 import type { ResponseRecord } from "../store";
 import type { SubProfile } from "./score";
 
-export const ANALYSIS_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+export const ANALYSIS_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 
 /**
  * ההנחיה הראשית של שלב התוצאה.
