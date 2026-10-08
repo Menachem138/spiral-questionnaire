@@ -45,7 +45,7 @@ export default async function DonePage({
   }
 
   const analysis = await getAnalysis(id);
-  const running = analysis?.status === "running" || (!analysis && Boolean(process.env.ANTHROPIC_API_KEY));
+  const running = analysis?.status === "running" || analysis?.status === "queued";
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8">
@@ -65,7 +65,7 @@ export default async function DonePage({
             <SpiralMark size={40} spin />
             <div>
               <div className="font-bold">הניתוח המלא נכתב עכשיו</div>
-              <div className="text-sm text-muted">זה לוקח בדרך כלל 2-4 דקות. הדף יתעדכן אוטומטית.</div>
+              <div className="text-sm text-muted">זה יכול לקחת כמה דקות. הדף יתעדכן אוטומטית.</div>
             </div>
             <AutoRefresh seconds={10} />
           </div>

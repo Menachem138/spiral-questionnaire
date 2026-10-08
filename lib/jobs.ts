@@ -11,7 +11,7 @@ export async function analyzeResponse(id: string) {
   await saveAnalysis(id, { status: "running", startedAt });
   try {
     const { result, model, usage } = await runAnalysis(rec);
-    await saveAnalysis(id, { status: "done", startedAt, finishedAt: new Date().toISOString(), model, result, usage });
+    await saveAnalysis(id, { status: "done", startedAt, finishedAt: new Date().toISOString(), model, result, usage, engine: "api" });
   } catch (err) {
     const message =
       err instanceof AnalysisNotConfiguredError

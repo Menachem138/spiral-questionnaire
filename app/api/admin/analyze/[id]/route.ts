@@ -10,7 +10,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   if (!(await getResponse(id))) return NextResponse.json({ error: "not found" }, { status: 404 });
   if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "מפתח ה-API של Anthropic עדיין לא הוגדר בשרת (ANTHROPIC_API_KEY)" }, { status: 400 });
+    // אין מפתח API: המשימה חוזרת לתור, וה-worker של Claude Code יפיק אותה בריצה הבאה
+    await saveAnalysis(id, { status: "queued", startedAt: new Date().toISOString() });
+    return NextResponse.json({ ok: true, queued: true });
   }
   await saveAnalysis(id, { status: "running", startedAt: new Date().toISOString() });
   after(() => analyzeResponse(id));

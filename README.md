@@ -11,7 +11,17 @@
 - **השאלון** (`/`): הטקסט נלקח אחד לאחד מ-`content/questionnaire.md` באמצעות `scripts/parse-questionnaire.mjs`. אין לערוך את הטקסט בקוד; אם צריך לשנות, עורכים את קובץ ה-md ומריצים `npm run parse-questionnaire`.
 - **מפתח הניקוד** (`lib/engine/key.ts`): לכל תשובה משקלות לצבעים + מניעים. נטען רק בשרת ולא נשלח לדפדפן.
 - **הניקוד** (`lib/engine/score.ts`): אחוזים מתוקנים לזמינות הצבעים באפשרויות, רמת ביטחון, פרופילים לפי תחום, רגיל מול לחץ, מוצהר מול בפועל.
-- **מנוע הניתוח** (`lib/engine/analysis.ts`): Claude מקבל את הציונים הקבועים ואת כל 24 הבחירות, בונה טבלת ראיות ואז כותב דוח אישי לפי ההנחיות. ידע הרקע על Spiral Dynamics נמצא ב-`lib/engine/knowledge.ts`.
+- **מנוע הניתוח** (`lib/engine/analysis.ts`): מקבל את הציונים הקבועים, העקביות, צירי הערכים, סימני הסתירה וכל 24 הבחירות, בונה טבלת ראיות ורשימת סתירות, ואז כותב דוח אישי לפי ההנחיות. ידע הרקע על Spiral Dynamics נמצא ב-`lib/engine/knowledge.ts`.
+- **הרצת הניתוח** (`worker/`): כברירת מחדל הניתוח רץ דרך **Claude Code במחשב של המנהל** (מנוי Claude, התחברות רשמית). השרת מכניס כל שאלון חדש לתור, וה-worker לוקח משימות, מריץ `claude -p` ומחזיר את הדוח. גיבוי לשעת חירום: `codex exec` (מנוי ChatGPT). שום פרטי התחברות לא עוברים לשרת. אם מוגדר `ANTHROPIC_API_KEY` בשרת, הניתוח רץ מיד בשרת במקום בתור.
+
+### הפעלת ה-worker
+
+```bash
+claude auth login
+bash worker/install-mac.sh https://spiral-questionnaire.vercel.app <WORKER_TOKEN>
+```
+
+הסרה: `bash worker/install-mac.sh --uninstall`. לוג: `~/.spiral-worker/worker.log`.
 - **ניהול** (`/admin`): רשימת כל המשיבים, דוח מלא לכל אחד, טבלת ראיות, התשובות עם המפתח, ייצוא לאקסל, הגדרה אם המשיבים רואים את התוצאה.
 
 ## משתני סביבה
@@ -20,7 +30,8 @@
 | --- | --- |
 | `ADMIN_PASSWORD` | סיסמת הכניסה לדף הניהול |
 | `SESSION_SECRET` | מחרוזת אקראית לחתימת העוגייה של המנהל |
-| `ANTHROPIC_API_KEY` | מפתח ה-API של Anthropic (למנוע הניתוח) |
+| `WORKER_TOKEN` | סוד משותף בין השרת ל-worker שרץ אצל המנהל |
+| `ANTHROPIC_API_KEY` | לא חובה. אם מוגדר, הניתוח רץ בשרת במקום דרך ה-worker |
 | `BLOB_READ_WRITE_TOKEN` | נוצר אוטומטית כשמחברים Vercel Blob (אחסון פרטי) |
 | `ANTHROPIC_MODEL` | לא חובה. ברירת מחדל: `claude-opus-5-5` |
 | `ANALYSIS_EFFORT` | לא חובה. ברירת מחדל: `high` |

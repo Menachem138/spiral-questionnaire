@@ -21,8 +21,22 @@ export interface TopSystem {
   when_another_takes_over: string;
 }
 
+export interface InternalContradiction {
+  kind: "DECLARED_VS_BEHAVIOR" | "CONTEXT_DIFFERENCE" | "INTERNAL_CONTRADICTION" | "CALM_VS_PRESSURE" | "PRICE_VS_NO_PRICE";
+  strength: number;
+  description: string;
+  questions: number[];
+  what_changed_between_situations: string;
+  show_to_user: boolean;
+}
+
 export interface AnalysisResult {
   evidence_table: EvidenceRow[];
+  contradictions_internal: InternalContradiction[];
+  why_dominant_first: string;
+  achieve_and_avoid: string;
+  common_across_domains: string;
+  interesting_contradictions: string;
   short_summary: string;
   which_color_am_i: string;
   percentages_note: string;
@@ -72,8 +86,26 @@ export const ANALYSIS_JSON_SCHEMA = obj({
       confidence: conf,
     }),
   },
+  contradictions_internal: {
+    type: "array",
+    items: obj({
+      kind: {
+        type: "string",
+        enum: ["DECLARED_VS_BEHAVIOR", "CONTEXT_DIFFERENCE", "INTERNAL_CONTRADICTION", "CALM_VS_PRESSURE", "PRICE_VS_NO_PRICE"],
+      },
+      strength: { type: "integer", enum: [0, 1, 2, 3, 4, 5] },
+      description: str,
+      questions: intArr,
+      what_changed_between_situations: str,
+      show_to_user: { type: "boolean" },
+    }),
+  },
   short_summary: str,
   which_color_am_i: str,
+  why_dominant_first: str,
+  achieve_and_avoid: str,
+  common_across_domains: str,
+  interesting_contradictions: str,
   percentages_note: str,
   big_picture: str,
   dominant_system: str,

@@ -2,7 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ResponseActions } from "@/components/AdminControls";
 import AutoRefresh from "@/components/AutoRefresh";
-import { AnalysisSections, ContextProfiles, EvidenceTable, MotivesList, ResultHeader } from "@/components/Report";
+import {
+  AnalysisSections,
+  ContextProfiles,
+  EvidenceTable,
+  InternalContradictions,
+  MotivesList,
+  ResultHeader,
+  ScoringSignals,
+} from "@/components/Report";
 import { isAdmin } from "@/lib/auth";
 import { COLOR_META, type Color } from "@/lib/colors";
 import { KEY } from "@/lib/engine/key";
@@ -57,10 +65,25 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
         </section>
 
         <section className="card p-6 sm:p-8">
+          <h2 className="mb-4 font-display text-2xl font-bold">עקביות וסתירות (חישוב המפתח)</h2>
+          <ScoringSignals scoring={s} />
+        </section>
+
+        <section className="card p-6 sm:p-8">
           <h2 className="mb-4 font-display text-2xl font-bold">מניעים שחוזרים בבחירות</h2>
           <MotivesList scoring={s} />
         </section>
 
+        {status === "queued" && (
+          <div className="card flex items-center gap-3 p-6">
+            <span className="h-3 w-3 rounded-full bg-gold" />
+            <div>
+              <div className="font-bold">ממתין לניתוח</div>
+              <div className="text-sm text-muted">ה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.</div>
+            </div>
+            <AutoRefresh seconds={20} />
+          </div>
+        )}
         {status === "running" && (
           <div className="card flex items-center gap-3 p-6">
             <span className="h-3 w-3 animate-pulse rounded-full bg-gold" />
@@ -82,12 +105,14 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
           <>
             <AnalysisSections a={analysis.result} address={rec.respondent.address} />
             <details className="card p-6 sm:p-8">
-              <summary className="cursor-pointer font-display text-xl font-bold">טבלת הראיות של המנוע (למנהל בלבד)</summary>
+              <summary className="cursor-pointer font-display text-xl font-bold">טבלת הראיות והסתירות של המנוע (למנהל בלבד)</summary>
               <div className="mt-4">
                 <EvidenceTable a={analysis.result} />
               </div>
+              <h3 className="mb-3 mt-8 font-bold">רשימת הסתירות הפנימית של המנוע</h3>
+              <InternalContradictions a={analysis.result} />
               <p className="mt-4 text-xs text-muted">
-                מודל: {analysis.model} · {analysis.usage?.input?.toLocaleString()} טוקנים נכנסים ·{" "}
+                מנוע: {analysis.engine ?? "api"} · מודל: {analysis.model} · {analysis.usage?.input?.toLocaleString()} טוקנים נכנסים ·{" "}
                 {analysis.usage?.output?.toLocaleString()} יוצאים
               </p>
             </details>

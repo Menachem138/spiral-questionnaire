@@ -2,7 +2,7 @@ import { after, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { score, validateAnswers } from "@/lib/engine/score";
 import { analyzeResponse } from "@/lib/jobs";
-import { getSettings, saveResponse, type Respondent } from "@/lib/store";
+import { getSettings, saveAnalysis, saveResponse, type Respondent } from "@/lib/store";
 
 export const maxDuration = 300;
 
@@ -46,8 +46,10 @@ export async function POST(req: Request) {
     scoring: score(answers),
   });
 
-  // הניתוח העמוק רץ ברקע אחרי שהמשיב כבר קיבל אישור
-  after(() => analyzeResponse(id));
+  // הניתוח העמוק: עם מפתח API הוא רץ מיד בשרת; אחרת הוא נכנס לתור של ה-worker
+  // שרץ אצל המנהל דרך Claude Code (מנוי) ומפיק אותו תוך דקות.
+  if (process.env.ANTHROPIC_API_KEY) after(() => analyzeResponse(id));
+  else await saveAnalysis(id, { status: "queued", startedAt: new Date().toISOString() });
 
   const settings = await getSettings();
   return NextResponse.json({ id, token, showResults: settings.showResultsToRespondent });

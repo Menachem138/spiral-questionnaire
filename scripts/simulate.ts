@@ -58,3 +58,17 @@ for (const target of COLORS) {
   const d = score(a).domains.difference!;
   console.log("SUB difference (Q9=ד, Q22=ה) ->", d.colors.slice(0, 3).map((c) => `${c.color} ${c.pct}`).join(", "));
 }
+
+// consistency and contradiction sanity
+{
+  const lv: Record<string, number> = {};
+  let contra = 0;
+  for (let i = 0; i < 2000; i++) {
+    const a: Answers = {};
+    for (const q of KEY) a[q.id] = [Math.floor(Math.random() * q.options.length)];
+    const s = score(a);
+    lv[s.consistency.level] = (lv[s.consistency.level] || 0) + 1;
+    contra += s.contradictions.filter((c) => c.strength >= 3).length / 2000;
+  }
+  console.log("RANDOM consistency", lv, "| strong contradictions per person", contra.toFixed(2));
+}

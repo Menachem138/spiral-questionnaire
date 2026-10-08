@@ -98,8 +98,12 @@ export function ResponseActions({
   return (
     <div className="card flex flex-col gap-4 p-5">
       <div className="flex flex-wrap gap-2">
-        <button className="btn btn-primary px-4 py-2 text-sm" onClick={regenerate} disabled={busy || analysisStatus === "running" || !hasKey}>
-          {analysisStatus === "none" ? "הפקת ניתוח מלא" : "הפקת הניתוח מחדש"}
+        <button
+          className="btn btn-primary px-4 py-2 text-sm"
+          onClick={regenerate}
+          disabled={busy || analysisStatus === "running" || analysisStatus === "queued"}
+        >
+          {analysisStatus === "none" ? "הפקת ניתוח מלא" : analysisStatus === "queued" ? "בתור לניתוח" : "הפקת הניתוח מחדש"}
         </button>
         <button className="btn btn-ghost px-4 py-2 text-sm" onClick={toggleShare}>
           {isShared ? "ביטול השיתוף עם המשיב" : "אפשר למשיב לראות את התוצאה"}
@@ -119,9 +123,9 @@ export function ResponseActions({
           מחיקה
         </button>
       </div>
-      {!hasKey && (
+      {!hasKey && analysisStatus === "queued" && (
         <p className="text-sm text-muted">
-          הניתוח העמוק יופעל ברגע שיוגדר מפתח ה-API של Anthropic בשרת. עד אז מוצגים הציונים והפרופילים המחושבים.
+          השאלון בתור. ה-worker של Claude Code במחשב שלך יפיק את הניתוח בריצה הבאה שלו.
         </p>
       )}
       {msg && <p className="text-sm text-ink-2">{msg}</p>}

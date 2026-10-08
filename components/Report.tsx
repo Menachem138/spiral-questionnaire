@@ -61,8 +61,12 @@ export function ConfidenceBadge({ level }: { level: Scoring["confidence"] }) {
 /** תשובה דטרמיניסטית ל"איזה צבע אני", כשאין (עדיין) ניתוח AI */
 export function deterministicHeadline(s: Scoring) {
   const [a, b, c] = s.top3.map((x) => COLOR_META[x].he);
-  if (s.clearDominant) return `המערכת הדומיננטית בפרופיל היא **${a}**. לצד ${a} בולטים גם ${b} ו${c}.`;
-  return `אין צבע יחיד ששולט באופן מובהק. הפרופיל משלב בעיקר **${a}**, **${b}** ו**${c}**.`;
+  const mode = s.dominance ?? (s.clearDominant ? "single" : "trio");
+  if (mode === "single")
+    return `אם צריך לבחור מערכת אחת שמייצגת בצורה הטובה ביותר את הפרופיל בשאלון, המערכת הדומיננטית היא: **${a}**. אבל הפרופיל אינו צבע אחד: בולטות בו גם ${b} ו${c}.`;
+  if (mode === "pair")
+    return `שתי מערכות מובילות כמעט באותה עוצמה: **${a}** ו**${b}**, כש${a} במקום הראשון בפער קטן. לצידן בולטת גם ${c}.`;
+  return `שלוש מערכות בולטות בפרופיל: **${a}**, **${b}** ו**${c}**. אין מערכת אחת ששולטת באופן מובהק.`;
 }
 
 function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
@@ -163,6 +167,21 @@ function titles(addr: Address) {
     interesting: g("🔎 מה מעניין במיוחד בפרופיל שלך", "🔎 מה מעניין במיוחד בפרופיל שלך", "🔎 מה מעניין במיוחד בפרופיל שלכם"),
     sentence: g("משפט הסיכום שלך", "משפט הסיכום שלך", "משפט הסיכום שלכם"),
     inYou: g("איך היא מופיעה אצלך", "איך היא מופיעה אצלך", "איך היא מופיעה אצלכם"),
+    whyFirst: g(
+      "למה הצבע הדומיננטי שלך קיבל את המקום הראשון",
+      "למה הצבע הדומיננטי שלך קיבל את המקום הראשון",
+      "למה הצבע הדומיננטי שלכם קיבל את המקום הראשון",
+    ),
+    achieve: g(
+      "מה אתה מנסה להשיג וממה אתה מנסה להימנע",
+      "מה את מנסה להשיג וממה את מנסה להימנע",
+      "מה אתם מנסים להשיג וממה אתם מנסים להימנע",
+    ),
+    differently: g(
+      "באילו מצבים אתה עשוי להתנהג אחרת",
+      "באילו מצבים את עשויה להתנהג אחרת",
+      "באילו מצבים אתם עשויים להתנהג אחרת",
+    ),
   };
 }
 
@@ -178,6 +197,7 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
   return (
     <div className="space-y-6">
       {prose("התמונה הגדולה", a.big_picture)}
+      {prose(T.whyFirst, a.why_dominant_first)}
       {prose(T.dominant, a.dominant_system)}
 
       <Section title="שלוש המערכות המובילות">
@@ -218,12 +238,14 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
       {prose("מה קורה כאשר שני ערכים מתנגשים", a.value_conflicts)}
       {prose(T.pressure, a.under_pressure)}
       {prose(T.drives, a.what_drives_you)}
+      {prose(T.achieve, a.achieve_and_avoid)}
       {prose("כסף, הצלחה וחופש", a.money_success_freedom)}
       {prose("מערכות יחסים ושייכות", a.relationships_belonging)}
       {prose("סמכות, כללים ועצמאות", a.authority_rules_independence)}
       {prose("שינוי ואי ודאות", a.change_uncertainty)}
       {prose("כישלון ותחרות", a.failure_competition)}
-      {prose("הבדלים בין תחומי החיים", a.context_differences)}
+      {prose("מה משותף לכל התחומים", a.common_across_domains)}
+      {prose(T.differently, a.context_differences)}
 
       {a.paradoxes.length > 0 && (
         <Section title={T.paradoxes}>
@@ -238,6 +260,7 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
         </Section>
       )}
 
+      {prose("הסתירות המעניינות ביותר", a.interesting_contradictions)}
       {prose("הפערים בין ערכים מוצהרים לבחירות", a.declared_vs_chosen)}
 
       <Section title={T.strengths}>
@@ -318,6 +341,77 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
         <Paragraphs text={a.confidence_explanation} className="text-ink-2" />
       </Section>
     </div>
+  );
+}
+
+const KIND_HE: Record<string, string> = {
+  DECLARED_VS_BEHAVIOR: "הצהרה מול בחירה",
+  CONTEXT_DIFFERENCE: "הבדל הקשר",
+  INTERNAL_CONTRADICTION: "סתירה פנימית",
+  CALM_VS_PRESSURE: "רגוע מול לחץ",
+  PRICE_VS_NO_PRICE: "עם מחיר מול בלי מחיר",
+};
+
+/** סימני הסתירה שחושבו מהמפתח (דטרמיניסטי, למנהל) */
+export function ScoringSignals({ scoring }: { scoring: Scoring }) {
+  const c = scoring.consistency;
+  if (!c) return null;
+  return (
+    <div className="space-y-5 text-sm">
+      <div>
+        <div className="mb-2 font-bold">
+          עקביות בין שאלות אימות: {c.level === "high" ? "גבוהה" : c.level === "medium" ? "בינונית" : "נמוכה"} ({c.score})
+        </div>
+        <div className="divide-y divide-line rounded-2xl border border-line">
+          {c.groups.map((g) => (
+            <div key={g.group} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+              <span>
+                {g.label} <span className="text-muted">(שאלות {g.questionIds.join(", ")})</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <ColorChip color={g.lead} size="sm" />
+                <span className="text-muted">{Math.round(g.leadShare * 100)}%</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="mb-2 font-bold">סימני סתירה שזוהו במפתח</div>
+        {scoring.contradictions.length === 0 ? (
+          <p className="text-muted">לא זוהו.</p>
+        ) : (
+          <ul className="space-y-2">
+            {scoring.contradictions.map((x, i) => (
+              <li key={i} className="rounded-xl bg-bg-2/60 px-3 py-2 leading-6">
+                <span className="font-semibold">
+                  {KIND_HE[x.kind]} · עוצמה {x.strength}/5:
+                </span>{" "}
+                {x.description}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function InternalContradictions({ a }: { a: AnalysisResult }) {
+  if (!a.contradictions_internal?.length) return <p className="text-sm text-muted">המנוע לא רשם סתירות.</p>;
+  return (
+    <ul className="space-y-3 text-sm">
+      {a.contradictions_internal.map((x, i) => (
+        <li key={i} className="rounded-xl border border-line px-4 py-3 leading-6">
+          <div className="font-semibold">
+            {KIND_HE[x.kind] ?? x.kind} · עוצמה {x.strength}/5 · שאלות {x.questions.join(", ")}
+            {x.show_to_user ? " · מוצג למשיב" : " · למנהל בלבד"}
+          </div>
+          <div className="mt-1 text-ink-2">{x.description}</div>
+          <div className="mt-1 text-muted">מה השתנה בין המצבים: {x.what_changed_between_situations}</div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

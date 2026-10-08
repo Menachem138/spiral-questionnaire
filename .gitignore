@@ -45,3 +45,6 @@ next-env.d.ts
 
 # local note with the admin password (never commit)
 /ADMIN-PASSWORD.txt
+
+# worker local config/test files
+/worker/.config.json

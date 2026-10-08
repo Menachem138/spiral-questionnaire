@@ -2,7 +2,7 @@ import "server-only";
 import { del, get, list, put } from "@vercel/blob";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { Answers, Scoring } from "./engine/score";
+import { score, SCORING_VERSION, type Answers, type Scoring } from "./engine/score";
 import type { AnalysisResult } from "./engine/analysis-schema";
 
 export interface Respondent {
@@ -26,13 +26,16 @@ export interface ResponseRecord {
 }
 
 export interface AnalysisRecord {
-  status: "running" | "done" | "error";
+  /** queued = ממתין ל-worker של Claude Code שרץ אצל המנהל */
+  status: "queued" | "running" | "done" | "error";
   startedAt: string;
   finishedAt?: string;
   model?: string;
   result?: AnalysisResult;
   error?: string;
   usage?: { input: number; output: number };
+  /** איזה מנוע הפיק את הניתוח: claude-code / codex / api */
+  engine?: string;
 }
 
 export interface Settings {
@@ -116,14 +119,20 @@ export async function saveResponse(rec: ResponseRecord) {
   await writeJson(`responses/${rec.id}.json`, rec);
 }
 
+/** תשובות שנשמרו עם גרסת ניקוד ישנה מחושבות מחדש לפי המפתח הנוכחי */
+function freshen(rec: ResponseRecord | null): ResponseRecord | null {
+  if (rec && rec.scoring?.version !== SCORING_VERSION) rec.scoring = score(rec.answers);
+  return rec;
+}
+
 export async function getResponse(id: string) {
   if (!SAFE_ID.test(id)) return null;
-  return readJson<ResponseRecord>(`responses/${id}.json`);
+  return freshen(await readJson<ResponseRecord>(`responses/${id}.json`));
 }
 
 export async function listResponses(): Promise<ResponseRecord[]> {
   const paths = (await listPaths("responses/")).filter((p) => p.endsWith(".json"));
-  const recs = await mapLimit(paths, 12, (p) => readJson<ResponseRecord>(p));
+  const recs = await mapLimit(paths, 12, async (p) => freshen(await readJson<ResponseRecord>(p)));
   return recs
     .filter((r): r is ResponseRecord => Boolean(r))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
