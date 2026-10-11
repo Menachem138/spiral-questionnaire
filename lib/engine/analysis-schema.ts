@@ -30,8 +30,20 @@ export interface InternalContradiction {
   show_to_user: boolean;
 }
 
+export interface SelfStory {
+  title: string;
+  believes_about_self: string;
+  choices_show: string;
+  based_on_questions: number[];
+  possible_explanation: string;
+  cost_of_pattern: string;
+  what_to_check: string;
+}
+
 export interface AnalysisResult {
   evidence_table: EvidenceRow[];
+  /** המטרה הסמויה: פערים בין הסיפור שהאדם מספר לעצמו לבין הבחירות */
+  self_stories?: SelfStory[];
   contradictions_internal: InternalContradiction[];
   why_dominant_first: string;
   achieve_and_avoid: string;
@@ -98,6 +110,18 @@ export const ANALYSIS_JSON_SCHEMA = obj({
       questions: intArr,
       what_changed_between_situations: str,
       show_to_user: { type: "boolean" },
+    }),
+  },
+  self_stories: {
+    type: "array",
+    items: obj({
+      title: str,
+      believes_about_self: str,
+      choices_show: str,
+      based_on_questions: intArr,
+      possible_explanation: str,
+      cost_of_pattern: str,
+      what_to_check: str,
     }),
   },
   short_summary: str,

@@ -177,6 +177,10 @@ function titles(addr: Address) {
       "מה את מנסה להשיג וממה את מנסה להימנע",
       "מה אתם מנסים להשיג וממה אתם מנסים להימנע",
     ),
+    stories: g("הסיפורים שאתה מספר לעצמך", "הסיפורים שאת מספרת לעצמך", "הסיפורים שאתם מספרים לעצמכם"),
+    believes: g("מה אתה כנראה מאמין על עצמך", "מה את כנראה מאמינה על עצמך", "מה אתם כנראה מאמינים על עצמכם"),
+    shows: g("מה הבחירות שלך מראות בפועל", "מה הבחירות שלך מראות בפועל", "מה הבחירות שלכם מראות בפועל"),
+    check: g("מה כדאי לך לבדוק בעצמך", "מה כדאי לך לבדוק בעצמך", "מה כדאי לכם לבדוק בעצמכם"),
     differently: g(
       "באילו מצבים אתה עשוי להתנהג אחרת",
       "באילו מצבים את עשויה להתנהג אחרת",
@@ -260,6 +264,37 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
         </Section>
       )}
 
+      {a.self_stories && a.self_stories.length > 0 && (
+        <section className="card border-2 border-ink/15 p-6 sm:p-8">
+          <h2 className="mb-1 font-display text-2xl font-bold">{T.stories}</h2>
+          <p className="mb-5 text-sm text-muted">הפער בין הדימוי העצמי לבין מה שהבחירות מראות, כשהמחיר אמיתי.</p>
+          <div className="space-y-6">
+            {a.self_stories.map((x, i) => (
+              <div key={i} className="rounded-2xl bg-bg-2/60 p-5">
+                <h3 className="font-bold text-ink">{x.title}</h3>
+                <dl className="mt-3 grid gap-3 text-[15.5px] leading-7">
+                  {(
+                    [
+                      [T.believes, x.believes_about_self],
+                      [T.shows, x.choices_show + (x.based_on_questions?.length ? ` (שאלות ${x.based_on_questions.join(", ")})` : "")],
+                      ["מה עשוי להסביר את הפער", x.possible_explanation],
+                      ["המחיר שהדפוס עלול לגבות", x.cost_of_pattern],
+                      [T.check, x.what_to_check],
+                    ] as const
+                  ).map(([k, v]) => (
+                    <div key={k}>
+                      <dt className="text-sm font-bold text-ink">{k}</dt>
+                      <dd className="text-ink-2">
+                        <Paragraphs text={v} />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {prose("הסתירות המעניינות ביותר", a.interesting_contradictions)}
       {prose("הפערים בין ערכים מוצהרים לבחירות", a.declared_vs_chosen)}
 
