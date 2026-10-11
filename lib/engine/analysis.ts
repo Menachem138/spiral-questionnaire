@@ -259,7 +259,7 @@ export async function runAnalysis(rec: ResponseRecord): Promise<{
     fallbacks: "default",
     thinking: { type: "adaptive" },
     output_config: {
-      effort: (process.env.ANALYSIS_EFFORT as "low" | "medium" | "high" | "xhigh" | "max") || "high",
+      effort: (process.env.ANALYSIS_EFFORT as "low" | "medium" | "high" | "xhigh" | "max") || "xhigh",
       format: { type: "json_schema", schema: ANALYSIS_JSON_SCHEMA },
     },
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
