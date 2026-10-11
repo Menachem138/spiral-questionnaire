@@ -59,18 +59,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           ) : (
             <div className="mt-4 space-y-3 rounded-xl bg-bg-2/70 px-3 py-3 text-sm text-ink-2">
               <p>
-                הניתוח רץ דרך Claude Code במחשב שלך (מנוי): אוטומטית כל יום ב-08:00 וב-20:00, או תוך שעה לכל היותר כשלוחצים
-                &quot;נתח עכשיו&quot;.
+                הניתוח רץ בענן של Claude על המנוי שלך, בלי תלות במחשב: כל יום ב-08:00 וב-20:00 הוא מנתח את כל התור,
+                ובכל שעה הוא בודק אם ביקשת &quot;נתח עכשיו&quot;.
               </p>
               <p className="flex items-center gap-2">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${seenMin !== null && seenMin <= 70 ? "bg-ok" : "bg-danger"}`}
                 />
                 {seenMin === null
-                  ? "המחשב עדיין לא התחבר לאתר"
+                  ? "מנוע הניתוח עדיין לא בדק את התור"
                   : seenMin <= 70
-                    ? "המחשב שלך מחובר ומוכן לנתח"
-                    : `המחשב לא היה מחובר ב-${seenMin < 120 ? `${seenMin} הדקות` : `${Math.round(seenMin / 60)} השעות`} האחרונות (כנראה כבוי או ישן)`}
+                    ? `מנוע הניתוח פעיל (בדיקה אחרונה לפני ${seenMin} דק׳)`
+                    : `מנוע הניתוח לא בדק את התור ב-${Math.round(seenMin / 60)} השעות האחרונות`}
               </p>
               <AnalyzeAllButton count={queuedCount} />
             </div>

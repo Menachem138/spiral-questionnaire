@@ -77,7 +77,7 @@ export function ResponseActions({
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) setMsg(data.error || "שגיאה");
-    else if (data.queued) setMsg("נשלח לניתוח. אם המחשב שלך דלוק, הניתוח יתחיל תוך שעה לכל היותר.");
+    else if (data.queued) setMsg("נשלח לניתוח. הוא יתחיל תוך שעה לכל היותר.");
     router.refresh();
   }
 
@@ -147,7 +147,7 @@ export function AnalyzeAllButton({ count }: { count: number }) {
           setBusy(true);
           const res = await fetch("/api/admin/analyze-all", { method: "POST" });
           setBusy(false);
-          setMsg(res.ok ? "נשלח לניתוח. אם המחשב שלך דלוק, הניתוח יתחיל תוך שעה לכל היותר." : "שגיאה");
+          setMsg(res.ok ? "נשלח לניתוח. הוא יתחיל תוך שעה לכל היותר." : "שגיאה");
         }}
       >
         נתח עכשיו את כל הממתינים ({count})

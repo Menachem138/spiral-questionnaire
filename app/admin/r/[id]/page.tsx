@@ -79,7 +79,7 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
             <span className="h-3 w-3 rounded-full bg-gold" />
             <div>
               <div className="font-bold">ממתין לניתוח</div>
-              <div className="text-sm text-muted">ה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.</div>
+              <div className="text-sm text-muted">הניתוח יופק בבדיקה הבאה של מנוע הניתוח (תוך שעה לכל היותר אם לחצת ה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.quot;נתח עכשיוה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.quot;, אחרת ב-08:00 או ב-20:00). הדף יתרענן לבד.</div>
             </div>
             <AutoRefresh seconds={20} />
           </div>
