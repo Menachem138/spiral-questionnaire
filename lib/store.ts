@@ -38,6 +38,17 @@ export interface AnalysisRecord {
   usage?: { input: number; output: number };
   /** איזה מנוע הפיק את הניתוח: claude-code / codex / api */
   engine?: string;
+  /** מתי המנהל ביקש "נתח עכשיו" */
+  requestedAt?: string;
+}
+
+/** תקציר מצב הניתוח לטבלה (קטן, נשמר ב-hash אחד) */
+export interface StatusMeta {
+  status: AnalysisStatus | "none";
+  startedAt?: string;
+  finishedAt?: string;
+  requestedAt?: string;
+  error?: string;
 }
 
 export interface Settings {
@@ -197,7 +208,14 @@ export async function deleteResponse(id: string) {
 export async function saveAnalysis(id: string, rec: AnalysisRecord, opts: { now?: boolean } = {}) {
   assertId(id);
   await kv().set(K.ana(id), rec);
-  await kv().hset(K.status, id, rec.status);
+  const meta: StatusMeta = {
+    status: rec.status,
+    startedAt: rec.startedAt,
+    finishedAt: rec.finishedAt,
+    requestedAt: rec.requestedAt,
+    error: rec.error?.slice(0, 200),
+  };
+  await kv().hset(K.status, id, JSON.stringify(meta));
   if (rec.status === "queued") {
     await kv().sadd(K.queue, id);
     if (opts.now) await kv().sadd(K.queueNow, id);
@@ -212,19 +230,56 @@ export async function getAnalysis(id: string) {
   return kv().get<AnalysisRecord>(K.ana(id));
 }
 
-/** סטטוס הניתוח של כל התשובות (פקודה אחת) */
-export async function listAnalysisStatuses(ids: string[]) {
+function parseMeta(v: unknown): StatusMeta {
+  if (v && typeof v === "object") return v as StatusMeta;
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v) as StatusMeta;
+    } catch {
+      return { status: v as AnalysisStatus };
+    }
+  }
+  return { status: "none" };
+}
+
+/** מצב הניתוח של כל התשובות (פקודה אחת) */
+export async function listAnalysisMeta(ids: string[]) {
   const all = await kv().hgetall(K.status);
-  const out: Record<string, AnalysisStatus | "none"> = {};
-  for (const id of ids) out[id] = (all[id] as AnalysisStatus) ?? "none";
+  const out: Record<string, StatusMeta> = {};
+  for (const id of ids) out[id] = all[id] ? parseMeta(all[id]) : { status: "none" };
   return out;
 }
 
-/** המנהל ביקש לנתח עכשיו את כל מה שממתין */
+export async function listAnalysisStatuses(ids: string[]) {
+  const meta = await listAnalysisMeta(ids);
+  return Object.fromEntries(ids.map((id) => [id, meta[id].status])) as Record<string, StatusMeta["status"]>;
+}
+
+/** המנהל ביקש לנתח עכשיו שאלונים מסוימים (או את כל מה שממתין) */
+export async function requestNow(ids: string[]) {
+  const now = new Date().toISOString();
+  let count = 0;
+  for (const id of ids) {
+    if (!SAFE_ID.test(id) || !(await kv().get(K.resp(id)))) continue;
+    const prev = await getAnalysis(id);
+    if (prev?.status === "running") continue;
+    await saveAnalysis(id, { ...(prev ?? {}), status: "queued", startedAt: now, requestedAt: now, error: undefined }, { now: true });
+    count++;
+  }
+  return count;
+}
+
 export async function requestAllQueuedNow() {
-  const q = await kv().smembers(K.queue);
-  if (q.length) await kv().sadd(K.queueNow, ...q);
-  return q.length;
+  return requestNow(await kv().smembers(K.queue));
+}
+
+/** תקלה אחרונה שה-worker דיווח (למשל חסימת רשת או מודל לא זמין) */
+export async function setWorkerIssue(message: string | null) {
+  await kv().set("worker:issue", message ? { at: new Date().toISOString(), message: message.slice(0, 300) } : null);
+}
+
+export async function getWorkerIssue() {
+  return kv().get<{ at: string; message: string }>("worker:issue");
 }
 
 const STALE_MS = 20 * 60_000;
@@ -238,7 +293,7 @@ export async function pendingJobs(scope: "now" | "all") {
   const queued = await kv().smembers(K.queue);
   const statuses = await kv().hgetall(K.status);
   const running = Object.entries(statuses)
-    .filter(([, s]) => s === "running")
+    .filter(([, s]) => parseMeta(s).status === "running")
     .map(([id]) => id);
   const anas = await kv().mget<AnalysisRecord>(running.map(K.ana));
   const stale = running.filter((_, i) => {

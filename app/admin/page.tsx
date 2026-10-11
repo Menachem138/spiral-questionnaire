@@ -1,30 +1,53 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AnalyzeAllButton, LogoutButton, ShowResultsToggle } from "@/components/AdminControls";
-import { ColorChip } from "@/components/Report";
+import ResponsesTable, { type Row } from "@/components/ResponsesTable";
 import { SpiralMark } from "@/components/SpiralMark";
 import { isAdmin } from "@/lib/auth";
 import { COLOR_META, CONFIDENCE_HE, COLORS } from "@/lib/colors";
-import { getSettings, getWorkerSeen, listAnalysisStatuses, listResponses } from "@/lib/store";
+import { getSettings, getWorkerIssue, getWorkerSeen, listAnalysisMeta, listResponses } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
-
-const STATUS: Record<string, { label: string; cls: string }> = {
-  done: { label: "ניתוח מוכן", cls: "text-ok" },
-  running: { label: "בכתיבה...", cls: "text-gold" },
-  queued: { label: "ממתין לניתוח", cls: "text-gold" },
-  error: { label: "שגיאה", cls: "text-danger" },
-  none: { label: "ללא ניתוח", cls: "text-muted" },
-};
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   if (!(await isAdmin())) redirect("/admin/login");
   const { q = "" } = await searchParams;
-  const [all, settings, workerSeen] = await Promise.all([listResponses(), getSettings(), getWorkerSeen()]);
-  const rows = q ? all.filter((r) => `${r.respondent.name} ${r.respondent.contact}`.includes(q)) : all;
-  const statuses = await listAnalysisStatuses(all.map((r) => r.id));
-  const queuedCount = all.filter((r) => statuses[r.id] === "queued").length;
-  const seenMin = workerSeen ? Math.round((Date.parse(new Date().toISOString()) - Date.parse(workerSeen)) / 60_000) : null;
+  const [all, settings, workerSeen, workerIssue] = await Promise.all([
+    listResponses(),
+    getSettings(),
+    getWorkerSeen(),
+    getWorkerIssue(),
+  ]);
+  const filtered = q ? all.filter((r) => `${r.respondent.name} ${r.respondent.contact}`.includes(q)) : all;
+  const meta = await listAnalysisMeta(all.map((r) => r.id));
+  const nowMs = Date.parse(new Date().toISOString());
+  const queuedCount = all.filter((r) => meta[r.id].status === "queued" && !meta[r.id].requestedAt).length;
+  const seenMin = workerSeen ? Math.round((nowMs - Date.parse(workerSeen)) / 60_000) : null;
+  const nextCheckAt = workerSeen && seenMin !== null && seenMin < 120 ? new Date(Date.parse(workerSeen) + 60 * 60_000).toISOString() : null;
+
+  // בדיקת תקינות: מה עלול למנוע מהניתוחים לרוץ עכשיו
+  const issues: string[] = [];
+  if (!process.env.ANTHROPIC_API_KEY) {
+    if (seenMin === null)
+      issues.push("מנוע הניתוח (הרוטינה בענן של Claude) עוד לא הצליח להתחבר לאתר אף פעם. הסיבה הסבירה: סביבת הענן חוסמת את כתובת האתר. צריך להוסיף את spiral-questionnaire.vercel.app להרשאות הרשת של הסביבה ב-claude.ai/code.");
+    else if (seenMin > 75)
+      issues.push(`מנוע הניתוח לא התחבר לאתר כבר ${seenMin < 180 ? `${seenMin} דקות` : `${Math.round(seenMin / 60)} שעות`} (הוא אמור לבדוק כל שעה). כדאי לבדוק את הרוטינה ב-claude.ai/code/routines.`);
+  }
+  const stuckReq = all.filter((r) => meta[r.id].status === "queued" && meta[r.id].requestedAt && nowMs - Date.parse(meta[r.id].requestedAt!) > 75 * 60_000);
+  if (stuckReq.length) issues.push(`${stuckReq.length} שאלונים נשלחו לניתוח לפני יותר משעה ועדיין לא התחילו.`);
+  const errored = all.filter((r) => meta[r.id].status === "error");
+  if (errored.length) issues.push(`${errored.length} ניתוחים נכשלו. אפשר לשלוח אותם שוב עם "נתח מחדש".`);
+  if (workerIssue && nowMs - Date.parse(workerIssue.at) < 24 * 3600_000)
+    issues.push(`דיווח אחרון ממנוע הניתוח: ${workerIssue.message}`);
+
+  const rows: Row[] = filtered.map((r) => ({
+    id: r.id,
+    name: r.respondent.name,
+    contact: r.respondent.contact,
+    date: new Date(r.createdAt).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" }),
+    top3: r.scoring.colors.slice(0, 3).map((c) => ({ color: c.color, pct: Math.round(c.pct) })),
+    confidence: CONFIDENCE_HE[r.scoring.confidence],
+    meta: meta[r.id],
+  }));
 
   const dist = Object.fromEntries(COLORS.map((c) => [c, 0])) as Record<string, number>;
   all.forEach((r) => dist[r.scoring.dominant]++);
@@ -63,15 +86,27 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 ובכל שעה הוא בודק אם ביקשת &quot;נתח עכשיו&quot;.
               </p>
               <p className="flex items-center gap-2">
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${seenMin !== null && seenMin <= 70 ? "bg-ok" : "bg-danger"}`}
-                />
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${issues.length ? "bg-danger" : "bg-ok"}`} />
                 {seenMin === null
-                  ? "מנוע הניתוח עדיין לא בדק את התור"
-                  : seenMin <= 70
-                    ? `מנוע הניתוח פעיל (בדיקה אחרונה לפני ${seenMin} דק׳)`
-                    : `מנוע הניתוח לא בדק את התור ב-${Math.round(seenMin / 60)} השעות האחרונות`}
+                  ? "מנוע הניתוח עוד לא בדק את התור"
+                  : `בדיקה אחרונה של מנוע הניתוח: לפני ${seenMin < 120 ? `${seenMin} דק׳` : `${Math.round(seenMin / 60)} שעות`}`}
+                {nextCheckAt && Date.parse(nextCheckAt) > nowMs && (
+                  <span className="text-muted">
+                    {" "}
+                    · הבדיקה הבאה בערך ב-
+                    {new Date(nextCheckAt).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
               </p>
+              {issues.length > 0 ? (
+                <ul className="space-y-1.5 rounded-lg bg-danger/10 px-3 py-2 text-danger">
+                  {issues.map((m, i) => (
+                    <li key={i}>⚠ {m}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-ok">✓ לא זוהו בעיות שמונעות ניתוחים</p>
+              )}
               <AnalyzeAllButton count={queuedCount} />
             </div>
           )}
@@ -94,59 +129,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <input name="q" defaultValue={q} placeholder="חיפוש לפי שם או פרטי קשר" className="field max-w-sm" />
       </form>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-bg-2/60 text-muted">
-              <tr>
-                <th className="px-4 py-3 text-start font-semibold">שם</th>
-                <th className="px-4 py-3 text-start font-semibold">תאריך</th>
-                <th className="px-4 py-3 text-start font-semibold">שלוש המערכות המובילות</th>
-                <th className="px-4 py-3 text-start font-semibold">ביטחון</th>
-                <th className="px-4 py-3 text-start font-semibold">ניתוח</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const st = STATUS[statuses[r.id]] ?? STATUS.none;
-                return (
-                  <tr key={r.id} className="border-t border-line hover:bg-accent-soft/40">
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/r/${r.id}`} className="font-semibold hover:underline">
-                        {r.respondent.name}
-                      </Link>
-                      {r.respondent.contact && <div className="text-xs text-muted" dir="auto">{r.respondent.contact}</div>}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-ink-2">
-                      {new Date(r.createdAt).toLocaleString("he-IL", {
-                        timeZone: "Asia/Jerusalem",
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        {r.scoring.colors.slice(0, 3).map((c) => (
-                          <ColorChip key={c.color} color={c.color} pct={Math.round(c.pct)} size="sm" />
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{CONFIDENCE_HE[r.scoring.confidence]}</td>
-                    <td className={`px-4 py-3 whitespace-nowrap font-semibold ${st.cls}`}>{st.label}</td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                    {q ? "לא נמצאו תוצאות" : "עדיין אין שאלונים. שתפו את הקישור לשאלון כדי להתחיל."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ResponsesTable rows={rows} nextCheckAt={nextCheckAt} />
     </main>
   );
 }

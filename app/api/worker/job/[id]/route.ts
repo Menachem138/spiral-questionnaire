@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { SYSTEM_PROMPT, buildEvidencePack } from "@/lib/engine/analysis";
 import { ANALYSIS_JSON_SCHEMA, type AnalysisResult } from "@/lib/engine/analysis-schema";
-import { getAnalysis, getResponse, saveAnalysis } from "@/lib/store";
+import { getAnalysis, getResponse, saveAnalysis, setWorkerIssue } from "@/lib/store";
 import { isWorker } from "@/lib/worker-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -12,7 +12,8 @@ export async function GET(req: Request, { params }: Ctx) {
   const { id } = await params;
   const rec = await getResponse(id);
   if (!rec) return NextResponse.json({ error: "not found" }, { status: 404 });
-  await saveAnalysis(id, { status: "running", startedAt: new Date().toISOString() });
+  const prev = await getAnalysis(id);
+  await saveAnalysis(id, { status: "running", startedAt: new Date().toISOString(), requestedAt: prev?.requestedAt });
   return NextResponse.json({ id, system: SYSTEM_PROMPT, prompt: buildEvidencePack(rec), schema: ANALYSIS_JSON_SCHEMA });
 }
 
@@ -36,6 +37,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const startedAt = prev?.startedAt ?? new Date().toISOString();
 
   if (body.requeue) {
+    await setWorkerIssue(String(body.error ?? "requeued"));
     // חוזר לתור הרגיל (לא ל"עכשיו"), כדי שלא ינסה שוב בכל בדיקה
     await saveAnalysis(id, { status: "queued", startedAt: new Date().toISOString(), error: String(body.error ?? "").slice(0, 300) });
     return NextResponse.json({ ok: true });
@@ -53,6 +55,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const missing = REQUIRED.filter((k) => !(k in (body.result as object)));
   if (missing.length) return NextResponse.json({ error: `missing fields: ${missing.join(", ")}` }, { status: 422 });
 
+  await setWorkerIssue(null);
   await saveAnalysis(id, {
     status: "done",
     startedAt,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ResponseActions } from "@/components/AdminControls";
 import AutoRefresh from "@/components/AutoRefresh";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import {
   AnalysisSections,
   ContextProfiles,
@@ -15,7 +16,7 @@ import { isAdmin } from "@/lib/auth";
 import { COLOR_META, type Color } from "@/lib/colors";
 import { KEY } from "@/lib/engine/key";
 import { QUESTIONS } from "@/lib/questionnaire";
-import { getAnalysis, getResponse } from "@/lib/store";
+import { getAnalysis, getResponse, getWorkerSeen } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ const ADDRESS_HE = { m: "לשון זכר", f: "לשון נקבה", "": "לא צ�
 export default async function ResponsePage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) redirect("/admin/login");
   const { id } = await params;
-  const [rec, analysis] = await Promise.all([getResponse(id), getAnalysis(id)]);
+  const [rec, analysis, workerSeen] = await Promise.all([getResponse(id), getAnalysis(id), getWorkerSeen()]);
+  const nextCheckAt = workerSeen ? new Date(Date.parse(workerSeen) + 60 * 60_000).toISOString() : null;
   if (!rec) notFound();
   const status = analysis?.status ?? "none";
   const s = rec.scoring;
@@ -74,24 +76,14 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
           <MotivesList scoring={s} />
         </section>
 
-        {status === "queued" && (
-          <div className="card flex items-center gap-3 p-6">
-            <span className="h-3 w-3 rounded-full bg-gold" />
-            <div>
-              <div className="font-bold">ממתין לניתוח</div>
-              <div className="text-sm text-muted">הניתוח יופק בבדיקה הבאה של מנוע הניתוח (תוך שעה לכל היותר אם לחצת ה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.quot;נתח עכשיוה-worker של Claude Code יפיק את הניתוח בריצה הבאה שלו. הדף יתרענן לבד.quot;, אחרת ב-08:00 או ב-20:00). הדף יתרענן לבד.</div>
-            </div>
-            <AutoRefresh seconds={20} />
-          </div>
-        )}
-        {status === "running" && (
-          <div className="card flex items-center gap-3 p-6">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-gold" />
-            <div>
-              <div className="font-bold">הניתוח העמוק נכתב עכשיו</div>
-              <div className="text-sm text-muted">בדרך כלל 2-4 דקות. הדף יתרענן לבד.</div>
-            </div>
-            <AutoRefresh seconds={10} />
+        {(status === "queued" || status === "running") && analysis && (
+          <div className="card p-6">
+            <div className="mb-3 font-bold">מצב הניתוח</div>
+            <AnalysisProgress
+              meta={{ status: analysis.status, startedAt: analysis.startedAt, requestedAt: analysis.requestedAt, error: analysis.error }}
+              nextCheckAt={nextCheckAt}
+            />
+            <AutoRefresh seconds={30} />
           </div>
         )}
         {status === "error" && (
