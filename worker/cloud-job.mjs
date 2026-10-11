@@ -9,6 +9,7 @@
  *   node worker/cloud-job.mjs submit <id> <file> -> validates the JSON against the schema and sends it
  *   node worker/cloud-job.mjs requeue <id> <msg> -> puts the job back in the queue
  */
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const SITE = (process.env.SITE_URL || "https://spiral-questionnaire.vercel.app").replace(/\/$/, "");
@@ -18,7 +19,23 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+/** in the cloud sandbox all traffic goes through an egress proxy; curl honors it, Node's fetch does not */
+function viaCurl(method, path, body) {
+  const args = ["-sS", "-m", "120", "-X", method, "-H", `authorization: Bearer ${TOKEN}`, "-H", "content-type: application/json", "-w", "\n%{http_code}"];
+  if (body) args.push("--data-binary", "@-");
+  const out = execFileSync("curl", [...args, SITE + path], { input: body ? JSON.stringify(body) : undefined, maxBuffer: 50 * 1024 * 1024 }).toString();
+  const i = out.lastIndexOf("\n");
+  const status = Number(out.slice(i + 1));
+  let data = {};
+  try {
+    data = JSON.parse(out.slice(0, i));
+  } catch {}
+  if (status < 200 || status >= 300) throw new Error(`${method} ${path} -> ${status} ${data.error ?? out.slice(0, 200)}`);
+  return data;
+}
+
 async function api(method, path, body) {
+  if (process.env.HTTPS_PROXY || process.env.https_proxy) return viaCurl(method, path, body);
   const res = await fetch(SITE + path, {
     method,
     headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" },
