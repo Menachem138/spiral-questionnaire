@@ -80,6 +80,10 @@ if (cmd === "pending") {
 } else if (cmd === "list") {
   const { responses } = await api("GET", "/api/worker/responses");
   for (const r of responses) console.log(`${r.id}\t${r.status}\t${r.createdAt.slice(0, 16)}\t${r.name}`);
+} else if (cmd === "show") {
+  const a = await api("GET", `/api/worker/analysis/${id}`);
+  writeFileSync(`/tmp/spiral-show-${id}.json`, JSON.stringify(a, null, 1));
+  console.log(`status=${a.status} engine=${a.engine ?? ""} model=${a.model ?? ""} -> /tmp/spiral-show-${id}.json`);
 } else if (cmd === "request") {
   console.log(await api("POST", `/api/worker/request/${id}`));
 } else if (cmd === "fetch") {
