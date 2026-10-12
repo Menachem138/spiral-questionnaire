@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { timingSafeEqual } from "node:crypto";
 import AutoRefresh from "@/components/AutoRefresh";
 import { AnalysisSections, ResultHeader } from "@/components/Report";
+import { ReaderReport } from "@/components/ReaderReport";
 import { SpiralMark } from "@/components/SpiralMark";
 import { getAnalysis, getResponse, getSettings } from "@/lib/store";
 
@@ -56,9 +57,13 @@ export default async function DonePage({
           <h1 className="font-display text-2xl font-bold">הפרופיל של {rec.respondent.name}</h1>
         </div>
       </header>
-      <ResultHeader scoring={rec.scoring} analysis={analysis?.result} />
+      {analysis?.status === "done" && analysis.result?.reader_version ? (
+        <ReaderReport r={analysis.result.reader_version} scoring={rec.scoring} address={rec.respondent.address} />
+      ) : (
+        <ResultHeader scoring={rec.scoring} analysis={analysis?.result} />
+      )}
       <div className="mt-6">
-        {analysis?.status === "done" && analysis.result ? (
+        {analysis?.status === "done" && analysis.result?.reader_version ? null : analysis?.status === "done" && analysis.result ? (
           <AnalysisSections a={analysis.result} address={rec.respondent.address} />
         ) : running ? (
           <div className="card flex items-center gap-4 p-6">

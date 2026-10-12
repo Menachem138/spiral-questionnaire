@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ResponseActions } from "@/components/AdminControls";
 import AutoRefresh from "@/components/AutoRefresh";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { ReaderReport } from "@/components/ReaderReport";
 import {
   AnalysisSections,
   ContextProfiles,
@@ -58,6 +59,18 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
           hasKey={Boolean(process.env.ANTHROPIC_API_KEY)}
         />
 
+        {analysis?.status === "done" && analysis.result?.reader_version && (
+          <details className="rounded-[1.5rem] border-2 border-accent/30 p-4 sm:p-6" open>
+            <summary className="cursor-pointer font-display text-xl font-bold">
+              הגרסה שהמשיב רואה (ברורה, למי שלא מכיר את החומר)
+            </summary>
+            <div className="mt-5">
+              <ReaderReport r={analysis.result.reader_version} scoring={s} address={rec.respondent.address} />
+            </div>
+          </details>
+        )}
+
+        <h2 className="pt-4 font-display text-2xl font-bold">הדוח המלא (למנהל)</h2>
         <ResultHeader scoring={s} analysis={analysis?.result} />
 
         <section className="card p-6 sm:p-8">

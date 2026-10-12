@@ -8,6 +8,8 @@
  *   node worker/cloud-job.mjs fetch <id>         -> writes /tmp/spiral/<id>/{system.md,evidence.md,schema.json}
  *   node worker/cloud-job.mjs submit <id> <file> -> validates the JSON against the schema and sends it
  *   node worker/cloud-job.mjs requeue <id> <msg> -> puts the job back in the queue
+ *   node worker/cloud-job.mjs list               -> all respondents and their analysis status
+ *   node worker/cloud-job.mjs request <id>       -> mark a respondent for "analyze now"
  */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -75,6 +77,11 @@ if (cmd === "pending") {
   const { pending } = await api("GET", `/api/worker/pending?scope=${scope}`);
   console.log(`scope=${scope} pending=${pending.length}`);
   for (const p of pending) console.log(p);
+} else if (cmd === "list") {
+  const { responses } = await api("GET", "/api/worker/responses");
+  for (const r of responses) console.log(`${r.id}\t${r.status}\t${r.createdAt.slice(0, 16)}\t${r.name}`);
+} else if (cmd === "request") {
+  console.log(await api("POST", `/api/worker/request/${id}`));
 } else if (cmd === "fetch") {
   const job = await api("GET", `/api/worker/job/${id}`);
   mkdirSync(dir(id), { recursive: true });

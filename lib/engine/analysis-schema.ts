@@ -40,7 +40,23 @@ export interface SelfStory {
   what_to_check: string;
 }
 
+/** הגרסה שהמשיב עצמו קורא: מרתקת, ברורה, בלי ידע מוקדם */
+export interface ReaderVersion {
+  headline: string;
+  what_is_this: string;
+  your_colors: { color: string; nickname: string; in_simple_words: string; in_you: string }[];
+  your_story: string;
+  insights: { title: string; text: string }[];
+  the_story_you_tell_yourself: string;
+  strengths: { title: string; text: string }[];
+  watch_out: { title: string; text: string }[];
+  tips: { tip: string; why: string }[];
+  closing: string;
+}
+
 export interface AnalysisResult {
+  /** הגרסה למשיב (בנוסף לדוח המלא למנהל) */
+  reader_version?: ReaderVersion;
   evidence_table: EvidenceRow[];
   /** המטרה הסמויה: פערים בין הסיפור שהאדם מספר לעצמו לבין הבחירות */
   self_stories?: SelfStory[];
@@ -170,4 +186,24 @@ export const ANALYSIS_JSON_SCHEMA = obj({
   closing_paragraph: str,
   confidence_level: conf,
   confidence_explanation: str,
+  reader_version: obj({
+    headline: str,
+    what_is_this: str,
+    your_colors: {
+      type: "array",
+      items: obj({
+        color: { type: "string", enum: ["BE", "PU", "RD", "BL", "OR", "GR", "YE", "TU"] },
+        nickname: str,
+        in_simple_words: str,
+        in_you: str,
+      }),
+    },
+    your_story: str,
+    insights: { type: "array", items: obj({ title: str, text: str }) },
+    the_story_you_tell_yourself: str,
+    strengths: { type: "array", items: obj({ title: str, text: str }) },
+    watch_out: { type: "array", items: obj({ title: str, text: str }) },
+    tips: { type: "array", items: obj({ tip: str, why: str }) },
+    closing: str,
+  }),
 });
