@@ -49,7 +49,11 @@ export async function POST(req: Request) {
   // הניתוח העמוק: עם מפתח API הוא רץ מיד בשרת; אחרת הוא נכנס לתור של ה-worker
   // שרץ אצל המנהל דרך Claude Code (מנוי) ומפיק אותו תוך דקות.
   if (process.env.ANTHROPIC_API_KEY) after(() => analyzeResponse(id));
-  else await saveAnalysis(id, { status: "queued", startedAt: new Date().toISOString() });
+  else {
+    // כל שאלון חדש נשלח לניתוח אוטומטית, בלי שהמנהל צריך ללחוץ
+    const now = new Date().toISOString();
+    await saveAnalysis(id, { status: "queued", startedAt: now, requestedAt: now }, { now: true });
+  }
 
   const settings = await getSettings();
   return NextResponse.json({ id, token, showResults: settings.showResultsToRespondent });

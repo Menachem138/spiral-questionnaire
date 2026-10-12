@@ -276,7 +276,7 @@ export function AnalysisSections({ a, address = "" }: { a: AnalysisResult; addre
                   {(
                     [
                       [T.believes, x.believes_about_self],
-                      [T.shows, x.choices_show + (x.based_on_questions?.length ? ` (שאלות ${x.based_on_questions.join(", ")})` : "")],
+                      [T.shows, x.choices_show + (x.based_on_questions?.length ? `\n\n**על מה זה מבוסס:** שאלות ${x.based_on_questions.join(", ")}` : "")],
                       ["מה עשוי להסביר את הפער", x.possible_explanation],
                       ["המחיר שהדפוס עלול לגבות", x.cost_of_pattern],
                       [T.check, x.what_to_check],

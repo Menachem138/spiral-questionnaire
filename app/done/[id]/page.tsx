@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { timingSafeEqual } from "node:crypto";
 import AutoRefresh from "@/components/AutoRefresh";
-import { AnalysisSections, ResultHeader } from "@/components/Report";
-import { ReaderReport } from "@/components/ReaderReport";
+import { AnalysisSections, ContextProfiles, ResultHeader } from "@/components/Report";
+import { Paragraphs } from "@/components/RichText";
 import { SpiralMark } from "@/components/SpiralMark";
 import { getAnalysis, getResponse, getSettings } from "@/lib/store";
 
@@ -57,22 +57,32 @@ export default async function DonePage({
           <h1 className="font-display text-2xl font-bold">הפרופיל של {rec.respondent.name}</h1>
         </div>
       </header>
-      {analysis?.status === "done" && analysis.result?.reader_version ? (
-        <ReaderReport r={analysis.result.reader_version} scoring={rec.scoring} address={rec.respondent.address} />
-      ) : (
+      {/* המשיב מקבל את אותו דוח מלא שהמנהל רואה (בלי כלי הניהול והמפתח הסודי) */}
+      <div className="space-y-6">
+        {analysis?.status === "done" && analysis.result?.reader_version?.what_is_this && (
+          <section className="rounded-[1.25rem] bg-bg-2/70 p-6 sm:p-8">
+            <h2 className="mb-3 font-display text-2xl font-bold">רגע לפני: מה בעצם בדקנו?</h2>
+            <Paragraphs text={analysis.result.reader_version.what_is_this} className="text-[16.5px] text-ink-2" />
+          </section>
+        )}
         <ResultHeader scoring={rec.scoring} analysis={analysis?.result} />
-      )}
-      <div className="mt-6">
-        {analysis?.status === "done" && analysis.result?.reader_version ? null : analysis?.status === "done" && analysis.result ? (
-          <AnalysisSections a={analysis.result} address={rec.respondent.address} />
+        {analysis?.status === "done" && analysis.result ? (
+          <>
+            <section className="card p-6 sm:p-8">
+              <h2 className="mb-1 font-display text-2xl font-bold">פרופיל לפי הקשר</h2>
+              <p className="mb-5 text-sm text-muted">איך הצבעים מתחלקים בתחומים שונים של החיים ובמצבים שונים.</p>
+              <ContextProfiles scoring={rec.scoring} />
+            </section>
+            <AnalysisSections a={analysis.result} address={rec.respondent.address} />
+          </>
         ) : running ? (
           <div className="card flex items-center gap-4 p-6">
             <SpiralMark size={40} spin />
             <div>
               <div className="font-bold">הניתוח המלא נכתב עכשיו</div>
-              <div className="text-sm text-muted">זה יכול לקחת כמה דקות. הדף יתעדכן אוטומטית.</div>
+              <div className="text-sm text-muted">זה יכול לקחת זמן מה. הדף יתעדכן אוטומטית.</div>
             </div>
-            <AutoRefresh seconds={10} />
+            <AutoRefresh seconds={30} />
           </div>
         ) : null}
       </div>
